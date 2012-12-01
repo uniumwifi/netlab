@@ -1,0 +1,184 @@
+#!/usr/bin/env python
+
+import sys
+import os
+import argparse
+import logging
+import cmd
+import array
+import socket
+import socketserver
+import stat
+import pty
+import fcntl
+import termios
+import tty
+from netlab import ipc
+
+LOG_PATH = '/var/log/netlabd.log'
+RUN_PATH = '/var/run/netlab'
+
+EOF = b'0x04'
+
+class Shell(cmd.Cmd):
+	prompt = "netlab> "
+	
+	def __init__(self):
+		cmd.Cmd.__init__(self)
+	
+	def emptyline(self):
+		pass
+
+	def do_exit(self, line):
+		"Exit"
+		return True
+	
+	def do_EOF(self, line):
+		"^D: Exit"
+		print
+		return True
+	
+	def do_shell(self, line):
+		"Spawn a shell"
+		pty.spawn(['login', '-f', 'root'])
+		
+	def do_ls(self, line):
+		"List running networks"
+		pass
+	
+	def do_start(self, line):
+		"Start a network"
+		pass
+	
+	def do_stop(self, line):
+		"Stop a network"
+		pass
+	
+	def do_attach(self, line):
+		"Attach to a network"
+		pass
+	
+	def do_detach(self, line):
+		"Detach from a network"
+		pass
+	
+def setup_tios(fd):
+	old = termios.tcgetattr(fd)
+	new = termios.tcgetattr(fd)
+	
+	I_IFLAG  = 0
+	I_OFLAG  = 1
+	I_CFLAG  = 2
+	I_LFLAG  = 3
+	I_ISPEED = 4
+	I_OSPEED = 5
+	I_CC     = 6
+	
+	new[I_IFLAG] = new[I_IFLAG] & ~termios.IGNBRK
+	new[I_IFLAG] = new[I_IFLAG] & termios.BRKINT
+	new[I_LFLAG] = new[I_LFLAG] & ~(termios.ECHO | termios.ICANON | termios.ISIG)
+	new[I_CC][termios.VMIN] = 1
+	new[I_CC][termios.VTIME] = 0
+	
+	termios.tcsetattr(fd, termios.TCSAFLUSH, new)
+	return old
+
+class ServerHandler(socketserver.BaseRequestHandler):
+	def handle(self):
+		print('handle')
+
+		try:
+			(master, slave) = pty.openpty()
+			
+			fcntl.fcntl(master, fcntl.F_SETFD, fcntl.FD_CLOEXEC)
+			fcntl.fcntl(slave, fcntl.F_SETFD, fcntl.FD_CLOEXEC)
+			
+			#tty.setraw(slave)
+			
+			self.send_fds('NONE'.encode(), [master])
+			os.close(master)
+			
+			os.dup2(slave, sys.stdin.fileno())
+			os.dup2(slave, sys.stdout.fileno())
+			os.dup2(slave, sys.stderr.fileno())
+		
+			shell = Shell()
+			shell.cmdloop()
+		finally:
+			os.close(slave)
+
+	def finish(self):
+		print('finish')
+	
+	def send_fds(self, msg, fds):
+		ancdata = [(socket.SOL_SOCKET, socket.SCM_RIGHTS, array.array("i", fds))]
+		return self.request.sendmsg([msg], ancdata)
+
+class Server(socketserver.ForkingMixIn, socketserver.UnixStreamServer):
+	def __init__(self):
+		socketserver.UnixStreamServer.__init__(self, ipc.CTRL_PATH, ServerHandler)
+
+	def server_activate(self):
+		# allow other users to connect to the control socket
+		mode = os.stat(self.server_address).st_mode
+		os.chmod(self.server_address, mode | stat.S_IROTH | stat.S_IWOTH)
+		socketserver.UnixStreamServer.server_activate(self)
+
+def init_logging(options):
+	# NOTE: this call can only be done ONCE
+	# and it MUST be the 1st call into the logging module for it to work
+	logging.basicConfig(level=logging.DEBUG,
+						format='%(message)s',
+						filename=options.log,
+						filemode='w')
+
+	console = logging.StreamHandler()
+	if options.quiet:
+		console.setLevel(logging.ERROR)
+	else:
+		if options.verbose == 1:
+			console.setLevel(logging.INFO)
+		elif options.verbose >= 2:
+			console.setLevel(logging.DEBUG)
+		else:
+			console.setLevel(logging.WARN)
+	logging.getLogger().addHandler(console)
+
+def parse_args():
+	parser = argparse.ArgumentParser(description='netlab manager')
+	parser.add_argument('-v', '--verbose', action='count', default=0,
+						help='Increase verbosity, can be specified multiple times')
+	parser.add_argument('-q', '--quiet', action='store_true', default=False,
+						help='Be really quiet')
+	parser.add_argument('-L', '--log', default=LOG_PATH,
+						help='Specify the logfile')
+	return parser.parse_args()
+
+def cleanup():
+	if os.path.exists(ipc.CTRL_PATH):
+		os.unlink(ipc.CTRL_PATH)
+
+def main(args):
+	init_logging(args)
+	#shell = Shell()
+	#shell.cmdloop()
+	try:
+		if not os.path.exists(RUN_PATH):
+			os.makedirs(RUN_PATH)
+		
+		cleanup()
+		server = Server()
+		server.serve_forever()
+	except KeyboardInterrupt:
+		print()
+	finally:
+		print("Shutting down...")
+		server.shutdown()
+		cleanup()
+		logging.shutdown()
+
+if __name__ == '__main__':
+	if os.getuid() != 0:
+		sys.exit('netlabd must be run as root.')
+
+	main(parse_args())

@@ -1,0 +1,12 @@
+#!/bin/bash
+
+if [ `id -u` == "0" ];
+then
+	. $1/activate
+	shift
+	echo "Starting $*"
+	$*
+else
+	echo
+	sudo $0 $VIRTUAL_ENV/bin $*
+fi

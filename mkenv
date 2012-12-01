@@ -1,0 +1,3 @@
+#!/bin/bash
+
+pyvenv-3.3 $WORKON_HOME/netlab

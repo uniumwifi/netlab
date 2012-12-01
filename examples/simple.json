@@ -1,0 +1,52 @@
+{
+	"env": {
+		"IOS_ROOT": "/opt/coco/ios"
+	},
+	"profiles": [{
+		"name": "cisco",
+		"type": "ios",
+		"model": "c7200",
+		"idle_pc": "0x6063a3c0",
+		"npe": "npe-400",
+		"image": "$(IOS_ROOT)/c7200-adventerprisek9-mz.150-1.M.bin"
+	}, {
+		"name": "host",
+		"type": "lxc",
+		"rootfs": "/var/lib/lxc/debian/rootfs"
+	}],
+	"networks": [{
+		"name": "SW",
+		"ports": [
+			{ "node": "RTR-1", "ifname": "Fa0/0", "vlan": 11 },
+			{ "node": "#HOST", "ifname": "eth1" }
+		]
+	}, {
+		"name": "#MGMT",
+		"ports": [
+			{ "node": "RTR-1", "ifname": "Fa0/0.11" },
+			{ "node": "RTR-2", "ifname": "Fa0/0.21" },
+			{ "node": "HOST-1", "ifname": "mgmt" }
+		]
+	}],
+	"nodes": [{
+		"name": "RTR-1",
+		"#profile": "cisco",
+		"startup-config": "$(PWD)/cfg/bench/coco/flaub/out/12-cap2-vortex.txt",
+		"interfaces": [
+			{ "name": "Fa0/0", "slot": 0, "port": 0 }
+		]
+	}, {
+		"name": "RTR-2",
+		"#profile": "cisco",
+		"interfaces": [
+			{ "name": "Fa0/0", "slot": 0, "port": 0 }
+		]
+	}, {
+		"name": "HOST-1",
+		"#profile": "host",
+		"interfaces": [
+			{ "name": "mgmt", "ip": "#AUTO" },
+			{ "name": "eth0", "ip": "172.20.11.55/28", "gateway": "172.20.11.62" }
+		]
+	}]
+}
