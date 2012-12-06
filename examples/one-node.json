@@ -1,0 +1,25 @@
+{
+	"env": {
+	},
+	"profiles": {
+		"host": {
+			"type": "lxc",
+			"rootfs": "/var/lib/lxc/debian/rootfs"
+		}
+	},
+	"bridges": {
+		"SW": {
+			"ports": [
+				{ "node": "HOST", "ifname": "eth0" }
+			]
+		}
+	},
+	"nodes": {
+		"HOST": {
+			"#profile": "host",
+			"interfaces": {
+				"eth0": { "ip": "192.168.0.100", "gateway": "192.168.0.1" }
+			}
+		}
+	}
+}

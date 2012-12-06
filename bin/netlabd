@@ -62,27 +62,6 @@ class Shell(cmd.Cmd):
 		"Detach from a network"
 		pass
 	
-def setup_tios(fd):
-	old = termios.tcgetattr(fd)
-	new = termios.tcgetattr(fd)
-	
-	I_IFLAG  = 0
-	I_OFLAG  = 1
-	I_CFLAG  = 2
-	I_LFLAG  = 3
-	I_ISPEED = 4
-	I_OSPEED = 5
-	I_CC     = 6
-	
-	new[I_IFLAG] = new[I_IFLAG] & ~termios.IGNBRK
-	new[I_IFLAG] = new[I_IFLAG] & termios.BRKINT
-	new[I_LFLAG] = new[I_LFLAG] & ~(termios.ECHO | termios.ICANON | termios.ISIG)
-	new[I_CC][termios.VMIN] = 1
-	new[I_CC][termios.VTIME] = 0
-	
-	termios.tcsetattr(fd, termios.TCSAFLUSH, new)
-	return old
-
 class ServerHandler(socketserver.BaseRequestHandler):
 	def handle(self):
 		print('handle')

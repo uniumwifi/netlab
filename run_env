@@ -1,0 +1,11 @@
+#!/bin/bash
+
+if [ `id -u` == "0" ];
+then
+	. $1/activate
+	shift
+	unshare -n -- $*
+else
+	echo
+	sudo $0 $VIRTUAL_ENV/bin $*
+fi

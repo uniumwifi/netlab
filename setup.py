@@ -13,6 +13,7 @@ setup(
 	scripts=[
 		'bin/netlabd',
 		'bin/netlab',
+		'bin/netlab-env',
 	],
 	data_files=[
 	]

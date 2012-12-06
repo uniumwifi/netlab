@@ -11,7 +11,7 @@
 ### END INIT INFO
 
 PYTHONPATH=/usr/lib/python2.7
-DAEMON={$2:-/usr/sbin/netlabd}
+DAEMON={$2:-/usr/bin/netlabd}
 DAEMON_OPTS="-d"
 NAME=netlabd
 DESC="netlab supervisor daemon"
