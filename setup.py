@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 from distutils.core import setup
 
@@ -11,9 +11,8 @@ setup(
 	requires=[
 	],
 	scripts=[
-		'bin/netlabd',
+		'bin/netmgr',
 		'bin/netlab',
-		'bin/netlab-env',
 	],
 	data_files=[
 	]

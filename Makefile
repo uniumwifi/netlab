@@ -1,6 +1,5 @@
 install:
-	python setup.py install > /dev/null
+	@python setup.py install > /dev/null
 	
-daemon: install
-	./run_root netlabd
-	
+netmgr: install
+	./run_root netmgr -v

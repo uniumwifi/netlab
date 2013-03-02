@@ -1,6 +1,15 @@
 import os
 import json
 import re
+import termios
+import select
+import signal
+import fcntl
+import tty
+import errno
+import struct
+import array
+import socket
 
 class JsonLoader(object):
 	KEY_INCLUDE = '#include'
@@ -80,3 +89,130 @@ class JsonLoader(object):
 		data = json.loads(mini_json, object_hook=self.__include)
 		return data
 
+class Terminal(object):
+	def __init__(self, fd):
+		self.fd = fd
+		
+	def fileno(self):
+		return self.fd
+
+	def read(self, size):
+		return os.read(self.fd, size)
+	
+	def write(self, buf):
+		os.write(self.fd, buf)
+	
+	def ioctl(self, *args):
+		return fcntl.ioctl(self.fd, *args)
+		
+	def __enter__(self):
+		self.oldtios = termios.tcgetattr(self.fd)
+		#tty.setraw(self.fd)
+
+		newtios = termios.tcgetattr(self.fd)
+
+		I_IFLAG  = 0
+		I_OFLAG  = 1
+		I_CFLAG  = 2
+		I_LFLAG  = 3
+		I_ISPEED = 4
+		I_OSPEED = 5
+		I_CC     = 6
+
+		#newtios[I_IFLAG] &= ~(termios.IGNBRK | termios.BRKINT)
+		newtios[I_LFLAG] &= ~(termios.ECHO | termios.ICANON | termios.ISIG)
+		newtios[I_CC][termios.VMIN] = 1
+		newtios[I_CC][termios.VTIME] = 0
+		
+		termios.tcsetattr(self.fd, termios.TCSANOW, newtios)
+	
+	def __exit__(self, type, value, traceback):
+		termios.tcsetattr(self.fd, termios.TCSAFLUSH, self.oldtios)
+
+ESC = b'0x01'
+
+class Console(object):
+	def __init__(self):
+		self.escape = False
+		self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+		self.stdin = Terminal(sys.stdin.fileno())
+		self.stdout = Terminal(sys.stdout.fileno())
+		self.master = None
+		
+	def recv_fds(self, msglen, maxfds):
+		fds = array.array("i")   # Array of ints
+		msg, ancdata, flags, addr = self.sock.recvmsg(msglen, socket.CMSG_LEN(maxfds * fds.itemsize))
+		for cmsg_level, cmsg_type, cmsg_data in ancdata:
+			if (cmsg_level == socket.SOL_SOCKET and cmsg_type == socket.SCM_RIGHTS):
+				# Append data, ignoring any truncated integers at the end.
+				fds.fromstring(cmsg_data[:len(cmsg_data) - (len(cmsg_data) % fds.itemsize)])
+		return msg, list(fds)
+	
+	def run(self):
+		if not os.path.exists(CTRL_PATH):
+			sys.exit('netlabd has not been started.')
+		
+		with self.stdin:
+			#os.setsid()
+			
+			self.sock.connect(CTRL_PATH)
+			msg, fds = self.recv_fds(1024, 1)
+			self.master = Terminal(fds[0])
+			
+			signal.signal(signal.SIGWINCH, self.sigwinch)
+			self.resize()
+			
+			self.mainloop()
+	
+	def resize(self):
+		#struct winsize {
+		#   unsigned short ws_row;
+		#   unsigned short ws_col;
+		#   unsigned short ws_xpixel;
+		#   unsigned short ws_ypixel;
+		#};
+		_WINSIZEFMT = "HHHH"
+		wsz = self.stdin.ioctl(termios.TIOCGWINSZ, '\0' * struct.calcsize(_WINSIZEFMT))
+		self.master.ioctl(termios.TIOCSWINSZ, wsz)
+		
+	def sigwinch(self, sig, stack):
+		self.resize()
+	
+	def mainloop(self):
+		inputs = [self.stdin, self.master]
+		
+		while True:
+			try:
+				reads, writes, excepts = select.select(inputs, [], [])
+			except OSError as e:
+				if e.errno == errno.EINTR:
+					continue
+				else:
+					raise
+			if self.stdin in reads:
+				if not self.stdin_handler():
+					return
+			if self.master in reads:
+				if not self.master_handler():
+					return
+	
+	def stdin_handler(self):
+		ch = self.stdin.read(1)
+		#print(hex(ord(ch)))
+		if ch[0] == ESC and not self.escape:
+			print('^A')
+			self.escape = not self.escape
+			return True
+			
+		if chr(ch[0]) == 'q' and self.escape:
+			print('^A-q')
+			return False
+			
+		self.escape = False
+		self.master.write(ch)
+		return True
+	
+	def master_handler(self):
+		data = self.master.read(1024)
+		self.stdout.write(data)
+		return True

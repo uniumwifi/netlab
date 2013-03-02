@@ -1,0 +1,4 @@
+#!/usr/bin/env python
+
+import netlab.mgr
+netlab.mgr.main()
