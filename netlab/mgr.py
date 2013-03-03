@@ -2,38 +2,11 @@
 
 import sys, os, shutil
 import argparse, logging
-import tempfile
-import json, datetime
 import bottle
+from . import VAR_PATH
+from session import Session, State, SESSION_JSON, MODEL_JSON
 
-VAR_PATH = '/var/lib/netmgr'
 LOG_PATH = '/var/log/netmgr.log'
-SESSION_JSON = 'session.json'
-
-class CustomEncoder(json.JSONEncoder):
-	def default(self, obj):
-		if isinstance(obj, datetime.datetime):
-			return obj.isoformat()
-		return super(CustomEncoder, self).default(obj)
-
-class Session(object):
-	def __init__(self, user, yaml):
-		dir = tempfile.mkdtemp(prefix='', dir=VAR_PATH)
-		self.path = os.path.join(dir, SESSION_JSON)
-		self.id = os.path.basename(dir)
-		self.user = user
-		self.yaml = yaml
-		
-	def dump(self):
-		return {
-			'id': self.id,
-			'creator': self.user,
-			'yaml': self.yaml
-		}
-		
-	def save(self):
-		with open(self.path, 'w') as fp:
-			json.dump(self.dump(), fp, cls=CustomEncoder)
 
 @bottle.route('/sessions')
 def sessions_list():
@@ -43,10 +16,9 @@ def sessions_list():
 
 @bottle.route('/sessions', method='POST')
 def sessions_new():
-	args = bottle.request.params
-	logging.info("sessions_new(): %s" % args)
-	session = Session(args.user, args.yaml)
-	session.save()
+	kwargs = bottle.request.params
+	logging.info("sessions_new(): %s" % kwargs.dict)
+	session = Session.Create(**kwargs)
 	return { 'id': session.id }
 
 @bottle.route('/sessions', method='DELETE')
@@ -61,6 +33,11 @@ def sessions_get(id):
 	logging.info("sessions_get(%s)" % id)
 	return bottle.static_file(SESSION_JSON, root=os.path.join(VAR_PATH, id))
 
+@bottle.route('/sessions/<id>/model')
+def sessions_model_get(id):
+	logging.info("sessions_model_get(%s)" % id)
+	return bottle.static_file(MODEL_JSON, root=os.path.join(VAR_PATH, id))
+
 @bottle.route('/sessions/<id>', method='DELETE')
 def sessions_delete(id):
 	logging.info("sessions_delete(%s)" % id)
@@ -71,11 +48,15 @@ def sessions_delete(id):
 @bottle.route('/sessions/<id>/start', method='POST')
 def sessions_start(id):
 	logging.info("sessions_start(%s)" % id)
+	session = Session.Load(id)
+	session.start()
 	return { 'status': 'starting' }
 
 @bottle.route('/sessions/<id>/stop', method='POST')
 def sessions_stop(id):
 	logging.info("sessions_stop(%s)" % id)
+	session = Session.Load(id)
+	session.stop()
 	return { 'status': 'stopping' }
 
 @bottle.route('/sessions/<id>/console', method='POST')
