@@ -10,5 +10,5 @@ $ source ~/netlab/bin/activate
 Run the daemon
 $ make netmgr 
 
-Install all
-$ make
+Run the client
+$ make && netlab $*

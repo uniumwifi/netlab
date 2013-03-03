@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 
-import sys, os
-import argparse, logging, uuid
-import datetime
-import json
+import sys, os, shutil
+import argparse, logging
+import tempfile
+import json, datetime
 import bottle
 
 VAR_PATH = '/var/lib/netmgr'
 LOG_PATH = '/var/log/netmgr.log'
+SESSION_JSON = 'session.json'
 
 class CustomEncoder(json.JSONEncoder):
 	def default(self, obj):
@@ -16,15 +17,23 @@ class CustomEncoder(json.JSONEncoder):
 		return super(CustomEncoder, self).default(obj)
 
 class Session(object):
-	def __init__(self):
-		self.id = str(uuid.uuid1())
-		self.created = datetime.datetime.now()
+	def __init__(self, user, yaml):
+		dir = tempfile.mkdtemp(prefix='', dir=VAR_PATH)
+		self.path = os.path.join(dir, SESSION_JSON)
+		self.id = os.path.basename(dir)
+		self.user = user
+		self.yaml = yaml
 		
 	def dump(self):
 		return {
 			'id': self.id,
-			'created': self.created
+			'creator': self.user,
+			'yaml': self.yaml
 		}
+		
+	def save(self):
+		with open(self.path, 'w') as fp:
+			json.dump(self.dump(), fp, cls=CustomEncoder)
 
 @bottle.route('/sessions')
 def sessions_list():
@@ -34,12 +43,10 @@ def sessions_list():
 
 @bottle.route('/sessions', method='POST')
 def sessions_new():
-	#data = bottle.request.json
-	logging.info("sessions_new(): %s" % bottle.request.params)
-	session = Session()
-	path = os.path.join(VAR_PATH, session.id)
-	with open(path, 'w') as fp:
-		json.dump(session.dump(), fp, cls=CustomEncoder)
+	args = bottle.request.params
+	logging.info("sessions_new(): %s" % args)
+	session = Session(args.user, args.yaml)
+	session.save()
 	return { 'id': session.id }
 
 @bottle.route('/sessions', method='DELETE')
@@ -47,19 +54,19 @@ def sessions_clear():
 	logging.info("sessions_clear()")
 	ls = os.listdir(VAR_PATH)
 	for entry in ls:
-		os.remove(os.path.join(VAR_PATH, entry))
+		shutil.rmtree(os.path.join(VAR_PATH, entry))
 
 @bottle.route('/sessions/<id>')
 def sessions_get(id):
 	logging.info("sessions_get(%s)" % id)
-	return bottle.static_file(id, root=VAR_PATH)
+	return bottle.static_file(SESSION_JSON, root=os.path.join(VAR_PATH, id))
 
 @bottle.route('/sessions/<id>', method='DELETE')
 def sessions_delete(id):
 	logging.info("sessions_delete(%s)" % id)
 	# TODO: check that 'id' does NOT have slashes (/) or updirs (..)
 	path = os.path.join(VAR_PATH, id)
-	os.remove(path)
+	shutil.rmtree(path)
 
 @bottle.route('/sessions/<id>/start', method='POST')
 def sessions_start(id):
@@ -76,11 +83,6 @@ def sessions_console(id):
 	logging.info("sessions_console(%s)" % id)
 	return { 'status': 'ok' }
 
-#@bottle.route('/envs')
-#def envs_list():
-#	logging.info("envs_list()")
-#	ls = os.listdir(VAR_PATH)
-#	return { 'keys': ls }
 
 def init_logging(options):
 	# NOTE: this call can only be done ONCE

@@ -1,5 +1,8 @@
+import os
 import urlparse
 import requests
+import errno
+import getpass
 
 class NetLab(object):
 	def __init__(self, url):
@@ -20,9 +23,16 @@ class NetLab(object):
 		return r.json()
 
 	def create(self, yaml):
+		if not os.path.exists(yaml):
+			raise IOError(errno.ENOENT, "File not found", yaml)
+		
 		url = urlparse.urljoin(self.__base, '/sessions')
-		payload = { 'yaml': yaml }
-		r = requests.post(url, params=payload)
+		data = {
+			'user': getpass.getuser(),
+			'yaml': os.path.abspath(yaml),
+		}
+		
+		r = requests.post(url, data=data)
 		return r.json()
 	
 	def delete(self, id):

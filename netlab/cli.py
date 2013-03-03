@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
+import sys
 import argparse
-import lib
 import pprint
+import lib
 
 DEFAULT_URL = 'http://localhost:999'
 
@@ -82,4 +83,7 @@ def main():
 	cmd_stop.set_defaults(func=do_stop)
 
 	args = parser.parse_args()
-	args.func(args)
+	try:
+		args.func(args)
+	except Exception as e:
+		sys.exit(e)
