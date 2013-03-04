@@ -18,25 +18,26 @@ class Session(Persist):
 	JSON_NAME = 'session.json'
 
 	def __init__(self, user, yaml):
-		dir = tempfile.mkdtemp(prefix='', dir=VAR_PATH)
-		# allow everyone read access
-		os.chmod(dir, os.stat(dir).st_mode |
-				 stat.S_IRGRP | stat.S_IXGRP |
-				 stat.S_IROTH | stat.S_IXOTH)
-
-		self.id = os.path.basename(dir)
+		self.id = self.__next_id()
 		self.user = user
 		self.yaml = yaml
-		self.net_id = 100
 		self.state = State.INIT
 		self.save()
 		self.__read_yaml()
 
 		env = self.new_env()
 	
+	def __next_id(self):
+		for i in xrange(100):
+			try:
+				os.makedirs(os.path.join(VAR_PATH, str(i)), 0755)
+				return i
+			except Exception as e:
+				pass
+
 	@property
 	def __dir(self):
-		return os.path.join(VAR_PATH, self.id)
+		return os.path.join(VAR_PATH, str(self.id))
 	
 	def new_env(self, dry=False):
 		return Environment(tool.create(dry)).extend(WORK_DIR=self.__dir)

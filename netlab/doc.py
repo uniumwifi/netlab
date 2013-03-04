@@ -3,7 +3,7 @@ import random
 import logging
 import ipaddr
 import jsonpickle
-from . import VAR_PATH
+from . import VAR_PATH, NET_START
 
 class Model(dict):
 	def __init__(self, initialdata={}):
@@ -58,7 +58,7 @@ class Persist(object):
 
 	@classmethod
 	def Path(self, id):
-		return os.path.join(VAR_PATH, id, self.JSON_NAME)
+		return os.path.join(VAR_PATH, str(id), self.JSON_NAME)
 	
 	@property
 	def __path(self):
@@ -86,7 +86,7 @@ class Context(object):
 		return 'net-%s-%d' % (self.session.id, seq)
 	
 	def alloc_admin(self, node):
-		ret = ipaddr.IPv4Network('10.8.%d.%d/24' % (self.session.net_id, node.index + 10))
+		ret = ipaddr.IPv4Network('10.8.%d.%d/24' % (NET_START + self.session.id, node.index + 10))
 		logging.warn('%s: %s', node.name, ret)
 		return ret
 
