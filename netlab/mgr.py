@@ -4,7 +4,7 @@ import sys, os, shutil
 import argparse, logging
 import bottle
 from . import VAR_PATH
-from session import Session, State, SESSION_JSON, MODEL_JSON
+from session import Session, SESSION_JSON
 
 LOG_PATH = '/var/log/netmgr.log'
 
@@ -33,11 +33,6 @@ def sessions_get(id):
 	logging.info("sessions_get(%s)" % id)
 	return bottle.static_file(SESSION_JSON, root=os.path.join(VAR_PATH, id))
 
-@bottle.route('/sessions/<id>/model')
-def sessions_model_get(id):
-	logging.info("sessions_model_get(%s)" % id)
-	return bottle.static_file(MODEL_JSON, root=os.path.join(VAR_PATH, id))
-
 @bottle.route('/sessions/<id>', method='DELETE')
 def sessions_delete(id):
 	logging.info("sessions_delete(%s)" % id)
@@ -47,9 +42,10 @@ def sessions_delete(id):
 
 @bottle.route('/sessions/<id>/start', method='POST')
 def sessions_start(id):
-	logging.info("sessions_start(%s)" % id)
+	kwargs = bottle.request.params
+	logging.info("sessions_start(%s): %s" % (id, kwargs.dict))
 	session = Session.Load(id)
-	session.start()
+	session.start(**kwargs)
 	return { 'status': 'starting' }
 
 @bottle.route('/sessions/<id>/stop', method='POST')
@@ -108,7 +104,7 @@ def main():
 
 	logging.info("Starting")
 	
-	bottle.run(host='0.0.0.0', port=999, debug=True)
+	bottle.run(host='localhost', port=999, debug=True)
 
 	logging.info("Shutdown")
 	logging.shutdown()

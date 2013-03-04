@@ -1,0 +1,8 @@
+#include inc.yaml
+
+nodes:
+- name: singleton
+  <<: *inc_one
+  interfaces:
+  - { name: eth0, plug: $ADMIN }
+  - { name: eth1, ip: 192.168.1.1/24, plug: mesh, dsdv_mode: generic, dsdv_redist: 1 }
