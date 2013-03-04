@@ -7,45 +7,45 @@ import getpass
 class NetLab(object):
 	def __init__(self, url):
 		self.__base = url
+		
+	def __url(self, path):
+		return urlparse.urljoin(self.__base, path)
 	
 	def list(self):
-		url = urlparse.urljoin(self.__base, '/sessions')
-		r = requests.get(url)
+		r = requests.get(self.__url('/sessions'))
 		return r.json()
 	
 	def clear(self):
-		url = urlparse.urljoin(self.__base, '/sessions')
-		requests.delete(url)
+		requests.delete(self.__url('/sessions'))
 	
 	def view(self, id):
-		url = urlparse.urljoin(self.__base, '/sessions/%s' % id)
-		r = requests.get(url)
-		return r.json()
+		session = requests.get(self.__url('/sessions/%s' % id))
+		doc = requests.get(self.__url('/sessions/%s/doc' % id))
+		return {
+			'session': session.json(),
+			'doc': doc.json()
+		}
 
 	def create(self, yaml):
 		if not os.path.exists(yaml):
 			raise IOError(errno.ENOENT, "File not found", yaml)
 		
-		url = urlparse.urljoin(self.__base, '/sessions')
 		data = {
 			'user': getpass.getuser(),
 			'yaml': os.path.abspath(yaml),
 		}
 		
-		r = requests.post(url, data=data)
+		r = requests.post(self.__url('/sessions'), data=data)
 		return r.json()
 	
 	def delete(self, id):
-		url = urlparse.urljoin(self.__base, '/sessions/%s' % id)
-		r = requests.delete(url)
+		r = requests.delete(self.__url('/sessions/%s' % id))
 	
 	def start(self, id):
-		url = urlparse.urljoin(self.__base, '/sessions/%s/start' % id)
-		r = requests.post(url)
+		r = requests.post(self.__url('/sessions/%s/start' % id))
 		return r.json()
 	
 	def stop(self, id):
-		url = urlparse.urljoin(self.__base, '/sessions/%s/stop' % id)
-		r = requests.post(url)
+		r = requests.post(self.__url('/sessions/%s/stop' % id))
 		return r.json()
 	

@@ -1,80 +1,55 @@
-import os
+import os, stat
 import json, datetime
 import tempfile, re
 import yaml
 from . import VAR_PATH
 from env import Environment
+from doc import Document, Persist
 import tool
 
-SESSION_JSON = 'session.json'
-DOC_JSON = 'doc.json'
-
-class CustomEncoder(json.JSONEncoder):
-	def default(self, obj):
-		if isinstance(obj, datetime.datetime):
-			return obj.isoformat()
-		return super(CustomEncoder, self).default(obj)
-	
 class State(object):
 	INIT = 'init'
 	STARTING = 'starting'
 	RUNNING = 'running'
 	STOPPING = 'stopping'
 	STOPPED = 'stopped'
+	
+class Session(Persist):
+	JSON_NAME = 'session.json'
 
-class Session(object):
-	def __init__(self, id, user, yaml, state):
-		self.id = id
+	def __init__(self, user, yaml):
+		dir = tempfile.mkdtemp(prefix='', dir=VAR_PATH)
+		# allow everyone read access
+		os.chmod(dir, os.stat(dir).st_mode |
+				 stat.S_IRGRP | stat.S_IXGRP |
+				 stat.S_IROTH | stat.S_IXOTH)
+
+		self.id = os.path.basename(dir)
 		self.user = user
 		self.yaml = yaml
-		self.state = state
-		
-	@staticmethod
-	def Path(id):
-		return os.path.join(VAR_PATH, id, SESSION_JSON)
+		self.net_id = 100
+		self.state = State.INIT
+		self.save()
+		self.__read_yaml()
+
+		env = self.new_env()
 	
 	@property
-	def path(self):
-		return Session.Path(self.id)
-		
-	def dump(self):
-		return {
-			'id': self.id,
-			'state': self.state,
-			'user': self.user,
-			'yaml': self.yaml
-		}
-		
-	def save(self):
-		with open(self.path, 'w') as fp:
-			json.dump(self.dump(), fp, cls=CustomEncoder)
+	def __dir(self):
+		return os.path.join(VAR_PATH, self.id)
 	
-	@classmethod
-	def Create(Class, user, yaml):
-		dir = tempfile.mkdtemp(prefix='', dir=VAR_PATH)
-		id = os.path.basename(dir)
-		session = Class(id, user, yaml, State.INIT)
-		session.save()
-		session.__read_yaml()
-		return session
-
-	@classmethod
-	def Load(Class, id):
-		path = Class.Path(id)
-		with open(path, 'r') as fp:
-			data = json.load(fp)
-			return Class(data['id'],
-						 data['user'],
-						 data['yaml'],
-						 data['state'])
+	def new_env(self, dry=False):
+		return Environment(tool.create(dry)).extend(WORK_DIR=self.__dir)
 	
 	def start(self, dry=False):
-		env = Environment(tool.factory(dry))
-		
+		env = self.new_env(dry)
+
 		self.state = State.STARTING
 		self.save()
 		
-		doc = self.__load_doc()
+		doc = Document.Load(self.id)
+		for node in doc.nodes.values():
+			print node.index
 
 		#for node in self.doc.nodes:
 		#	vm = self.vm_tbl[node.type](self.env, node)
@@ -85,12 +60,12 @@ class Session(object):
 		self.save()
 	
 	def stop(self, dry=False):
-		env = Environment(tool.factory(dry))
+		env = Environment(tool.create(dry))
 
 		self.state = State.STOPPING
 		self.save()
 
-		doc = self.__load_doc()
+		doc = Document.Load(self.id)
 
 		self.state = State.STOPPED
 		self.save()
@@ -108,35 +83,11 @@ class Session(object):
 		pattern = re.compile('^\#include[\s]+([\S]+)[\s]*$', re.MULTILINE)
 		contents = pattern.sub(self.__yaml_include, contents)
 		
-		print(contents)
+		#print(contents)
 	
-		doc = yaml.load(contents)
-		self.__save_doc(doc)
+		doc = Document(self, yaml.load(contents))
+		doc.save()
 
 		import pprint
 		pprint.pprint(doc)
-		#for kwargs in doc.get('vlans', {}):
-		#	model = Model.Model(kwargs)
-		#	vlan = Vlan(self.env, model)
-		#	self.vlans.append(vlan)
-		#	
-		#for kwargs in doc.get('segments', {}):
-		#	segment = Model.Segment(kwargs)
-		#	self.__create_bridge(segment)
-		#
-		#for kwargs in doc.get('nodes', {}):
-		#	node = Model.Node(kwargs)
-		#	for ifc in node.interfaces.values():
-		#		if ifc.plug:
-		#			self.__create_bridge(ifc)
-		#	self.nodes.append(node)
 	
-	def __load_doc(self):
-		path = os.path.join(VAR_PATH, self.id, DOC_JSON)
-		with open(path, 'r') as fp:
-			return json.load(fp)
-	
-	def __save_doc(self, doc):
-		path = os.path.join(VAR_PATH, self.id, DOC_JSON)
-		with open(path, 'w') as fp:
-			json.dump(doc, fp, cls=CustomEncoder)

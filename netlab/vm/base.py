@@ -5,7 +5,7 @@ import shutil
 import logging
 
 global_vars = {
-	'VM_DIR'         : '$(NETLAB_DIR)',
+	'VM_DIR'         : '$(WORK_DIR)',
 	'VM_NODE'        : '$(VM_DIR)/nodes/$(name)',
 	'VM_BASE'        : '$(VM_DIR)/base/$(rootfs|hash)',
 	'VM_ROOT'        : '$(VM_NODE)/root',

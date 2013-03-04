@@ -1,3 +1,6 @@
 bottle
 requests
 pyaml
+jinja2
+ipaddr
+jsonpickle

@@ -4,7 +4,8 @@ import sys, os, shutil
 import argparse, logging
 import bottle
 from . import VAR_PATH
-from session import Session, SESSION_JSON
+from session import Session
+from doc import Document
 
 LOG_PATH = '/var/log/netmgr.log'
 
@@ -18,7 +19,7 @@ def sessions_list():
 def sessions_new():
 	kwargs = bottle.request.params
 	logging.info("sessions_new(): %s" % kwargs.dict)
-	session = Session.Create(**kwargs)
+	session = Session(**kwargs)
 	return { 'id': session.id }
 
 @bottle.route('/sessions', method='DELETE')
@@ -31,7 +32,12 @@ def sessions_clear():
 @bottle.route('/sessions/<id>')
 def sessions_get(id):
 	logging.info("sessions_get(%s)" % id)
-	return bottle.static_file(SESSION_JSON, root=os.path.join(VAR_PATH, id))
+	return bottle.static_file(Session.JSON_NAME, root=os.path.join(VAR_PATH, id))
+
+@bottle.route('/sessions/<id>/doc')
+def sessions_doc_get(id):
+	logging.info("sessions_get(%s)" % id)
+	return bottle.static_file(Document.JSON_NAME, root=os.path.join(VAR_PATH, id))
 
 @bottle.route('/sessions/<id>', method='DELETE')
 def sessions_delete(id):

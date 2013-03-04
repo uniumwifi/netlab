@@ -1,9 +1,7 @@
 Initial development setup:
 $ virtualenv ~/netlab
 $ source ~/netlab/bin/activate
-$ pip install bottle
-$ pip install requests
-$ pip install pyaml
+$ pip -r requirements.pip
 
 Daily development work:
 $ source ~/netlab/bin/activate

@@ -1,7 +1,7 @@
 import time
 import subprocess
 
-def factory(dry):
+def create(dry):
 	if dry:
 		return DryTool()
 	else:

@@ -8,13 +8,7 @@ ENV_JSON = 'env.json'
 # environment of expansion variables
 global_vars = {
 	# system stuff
-	#'PWD'              : os.getcwd(),
-	#'PID'              : str(os.getpid()),
-	#'USER_ID'          : str(os.geteuid()),
-	#'USER'             : get_user(),
-	#'HOME'             : get_home(),
 	'MACHINE'          : platform.machine(),
-	'ADMIN_TAP'        : '$(USER)-tap',
 	#'SCREEN'           : 'screen -t $(name) $(cmd)',
 	#'SCREEN_CMD'       : 'screen -p $(name) -X $(cmd)',
 	#'SCREENRC'         : '$(PWD)/scripts/.screenrc',
@@ -81,12 +75,6 @@ class Environment(object):
 		logging.info(cmd)
 		return self.tool.run_output(cmd.split())
 
-	#def rmdir(self, symbol, **kwargs):
-	#	path = self.resolve(symbol, **kwargs)
-	#	cmd = 'rm -rf %s' % path
-	#	if self.options.dry_run or os.path.exists(path):
-	#		self.system(cmd)
-	
 	def hash(self, symbol, **kwargs):
 		value = self.resolve(symbol, **kwargs)
 		path = os.path.normpath(value)
