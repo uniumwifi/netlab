@@ -77,7 +77,7 @@ class Session(Persist):
 		if dry:
 			self.state = State.DRY
 		else:
-			self.start = State.RUNNING
+			self.state = State.RUNNING
 		self.save()
 	
 	def stop(self):
