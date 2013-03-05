@@ -14,8 +14,14 @@ class NetLab(object):
 		return urlparse.urljoin(self.__base, path)
 	
 	def list(self):
+		ret = {}
 		r = requests.get(self.__url('/sessions'))
-		return r.json()
+		sessions = r.json()
+		for id in sessions['keys']:
+			r = requests.get(self.__url('/sessions/%s' % id))
+			session = r.json()
+			ret[session['id']] = session
+		return ret
 	
 	def clear(self):
 		requests.delete(self.__url('/sessions'))

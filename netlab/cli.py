@@ -10,7 +10,12 @@ DEFAULT_URL = 'http://localhost:999'
 def do_list(args):
 	lab = lib.NetLab(args.url)
 	r = lab.list()
-	pprint.pprint(r)
+	#pprint.pprint(r)
+	fmt = '{0:<10} {1:<20} {2:<20} {3}'
+	print(fmt.format('ID', 'User', 'State', 'YAML'))
+	print(fmt.format('--', '----', '-----', '----'))
+	for k, v in r.items():
+		print(fmt.format(v['id'], v['user'], v['state'], v['yaml']))
 
 def do_clear(args):
 	# TODO: double check user with a prompt
