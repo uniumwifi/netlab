@@ -63,7 +63,7 @@ class Persist(object):
 	@property
 	def __path(self):
 		return self.Path(self.id)
-		
+
 class Context(object):
 	def __init__(self, session):
 		self.seq_tap = 0

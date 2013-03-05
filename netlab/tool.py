@@ -1,5 +1,6 @@
 import time
 import subprocess
+import logging
 
 def create(dry):
 	if dry:
@@ -9,9 +10,9 @@ def create(dry):
 
 class DryTool(object):
 	def sleep(self, secs):
-		print('sleep(%s)' % secs)
+		logging.info('sleep(%s)' % secs)
 
-	def run(self, cmd, bg, cwd, ignore):
+	def run(self, cmd, bg, cwd):
 		pass
 
 	def run_output(self, cmd):
@@ -21,11 +22,11 @@ class Tool(object):
 	def sleep(self, secs):
 		time.sleep(secs)
 	
-	def run(self, cmd, bg, cwd, ignore):
+	def run(self, cmd, bg, cwd):
 		args = {
 			'stdout'    : subprocess.PIPE,
 			'stderr'    : subprocess.PIPE,
-			'cwd'       : _cwd,
+			'cwd'       : cwd,
 			'close_fds' : True,
 		}
 		
@@ -40,7 +41,7 @@ class Tool(object):
 					logging.info(line.rstrip())
 				for line in stderr.splitlines():
 					logging.error(line.rstrip())
-			if not ignore and p.returncode:
+			if p.returncode:
 				raise subprocess.CalledProcessError(p.returncode, cmd)
 			return p
 		finally:
@@ -49,5 +50,4 @@ class Tool(object):
 				p.stderr.close()
 
 	def run_output(self, cmd):
-		p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-		return p.communicate()[0]
+		return subprocess.check_output(cmd)

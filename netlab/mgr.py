@@ -17,8 +17,8 @@ def sessions_list():
 
 @bottle.route('/sessions', method='POST')
 def sessions_new():
-	kwargs = bottle.request.params
-	logging.info("sessions_new(): %s" % kwargs.dict)
+	kwargs = bottle.request.json
+	logging.info("sessions_new(): %s" % kwargs)
 	session = Session(**kwargs)
 	return { 'id': session.id }
 

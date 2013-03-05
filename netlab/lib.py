@@ -3,6 +3,8 @@ import urlparse
 import requests
 import errno
 import getpass
+import string
+import json
 
 class NetLab(object):
 	def __init__(self, url):
@@ -26,16 +28,26 @@ class NetLab(object):
 			'doc': doc.json()
 		}
 
-	def create(self, yaml):
+	def create(self, yaml, envs, envfiles):
 		if not os.path.exists(yaml):
 			raise IOError(errno.ENOENT, "File not found", yaml)
+		for f in envfiles:
+			if not os.path.exists(f):
+				raise IOError(errno.ENOENT, "File not found", f)
+			
+		env = {}
+		for e in envs:
+			(k, v) = e.split('=', 1)
+			env[k] = v
 		
 		data = {
 			'user': getpass.getuser(),
 			'yaml': os.path.abspath(yaml),
+			'env': env,
+			'envfiles': map(os.path.abspath, envfiles)
 		}
-		
-		r = requests.post(self.__url('/sessions'), data=data)
+		headers = {'content-type': 'application/json'}
+		r = requests.post(self.__url('/sessions'), headers=headers, data=json.dumps(data))
 		return r.json()
 	
 	def delete(self, id):

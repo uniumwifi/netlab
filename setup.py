@@ -7,7 +7,7 @@ setup(
 	version='1.0',
 	description='Network Laboratory',
 	author='Frank Laub',
-	packages=['netlab'],
+	packages=['netlab', 'netlab.vm'],
 	requires=[
 	],
 	scripts=[

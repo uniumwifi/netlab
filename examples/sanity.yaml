@@ -1,8 +1,10 @@
-#include inc.yaml
+#include uml.yaml
 
 nodes:
 - name: singleton
-  <<: *inc_one
+  <<: *p_uml
+  vmlinux: $(DVL_OPENWRT)/bin/uml-grs/openwrt-uml-vmlinux
+  rootfs:  $(DVL_OPENWRT)/bin/uml-grs/openwrt-uml-ext4.img
   interfaces:
   - { name: eth0, plug: $ADMIN }
   - { name: eth1, ip: 192.168.1.1/24, plug: mesh, dsdv_mode: generic, dsdv_redist: 1 }

@@ -19,7 +19,7 @@ def do_clear(args):
 
 def do_create(args):
 	lab = lib.NetLab(args.url)
-	r = lab.create(args.file)
+	r = lab.create(args.file, args.env, args.envfile)
 	pprint.pprint(r)
 
 def do_view(args):
@@ -69,6 +69,10 @@ def main():
 	cmd_create.set_defaults(func=do_create)
 	cmd_create.add_argument('-f', '--file', required=True,
 							help='Specify yaml descriptor file')
+	cmd_create.add_argument('-e', '--env', action='append', default=[],
+							help='Add an environment variable')
+	cmd_create.add_argument('-E', '--envfile', action='append', default=[],
+							help='Add environment variables from a json file')
 	
 	cmd_view = commands.add_parser('view', parents=[item_parser])
 	cmd_view.set_defaults(func=do_view)

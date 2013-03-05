@@ -50,16 +50,16 @@ class Environment(object):
 		new_vars.update(**kwargs)
 		return Environment(self.tool, new_vars)
 
-	def run(self, _cmd, _force=False, _bg=False, _cwd=None, _ignore=False, **kwargs):
+	def run(self, _cmd, _bg=False, _cwd=None, **kwargs):
 		cmd = self.resolve(_cmd, **kwargs)
 
 		if _cwd:
 			_cwd = self.resolve(_cwd, **kwargs)
 
 		logging.info(cmd)
-		self.tool.run(cmd.split(), _force, _bg, _cwd, _ignore)
+		self.tool.run(cmd.split(), _bg, _cwd)
 		
-	def run_args(self, _cmd_args, _force=False, _bg=False, _cwd=None, _ignore=False, **kwargs):
+	def run_args(self, _cmd_args, _bg=False, _cwd=None, **kwargs):
 		cmd_args = []
 		for x in _cmd_args:
 			cmd_args.append(self.resolve(x, **kwargs))
@@ -68,7 +68,7 @@ class Environment(object):
 			_cwd = self.resolve(_cwd, **kwargs)
 
 		logging.info(cmd_args)
-		self.tool.run(cmd_args, _force, _bg, _cwd, _ignore)
+		self.tool.run(cmd_args, _bg, _cwd)
 	
 	def run_output(self, _cmd, **kwargs):
 		cmd = self.resolve(_cmd, **kwargs)

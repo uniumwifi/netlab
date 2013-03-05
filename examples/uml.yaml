@@ -1,0 +1,4 @@
+profiles:
+  uml: &p_uml
+    type: uml
+    memory: 64M

@@ -1,6 +1,5 @@
 import os
 import string
-import umlab
 import shutil
 import logging
 
@@ -15,34 +14,17 @@ global_vars = {
 	'VM_MNT'         : '$(VM_ROOT)/host/$(mnt.name)',
 }
 
-def init(env):
-	env.update(global_vars)
-	
 class VirtualMachine:
-	base_refs = {}
-	
-	def __init__(self, env, node):
+	def __init__(self, env, node, vars):
 		self.node = node
-		self.env = env.extend(node)
-	
-	def start_overlay(self):
-		self.prepare_overlay()
-		self.prepare_config()
-		self.env.fs_union('rootfs', 'VM_BASE', 'VM_OVERLAY', 'VM_ROOT')
-	
-	def stop_overlay(self):
-		self.env.fs_deunion('VM_BASE', 'VM_ROOT')
-		
-	def start_mounts(self):
-		for mnt in self.node.mounts.values():
-			env = self.env.extend(mnt=mnt)
-			env.fs_bind('mnt.path', 'VM_MNT')
-	
-	def stop_mounts(self):
-		for mnt in self.node.mounts.values():
-			env = self.env.extend(mnt=mnt)
-			env.fs_umount('VM_MNT')
 
+		new_vars = {}
+		new_vars.update(node)
+		new_vars.update(global_vars)
+		new_vars.update(vars)
+		
+		self.env = env.extend(new_vars)
+	
 	def start_interfaces(self):
 		for ifc in self.node.interfaces.values():
 			if ifc.plug:
@@ -52,8 +34,8 @@ class VirtualMachine:
 				else:
 					net = 'ifc.net.name'
 				logging.warn('%s/%s: %s', self.node.name, ifc.name, ifc.tap)
-				env.tap_start('ifc.tap', 'USER')
-				env.brctl_addif(net, 'ifc.tap')
+				env.run('ip link add $(ifc.tap)')
+				env.run('brctl addif $(ifc.net) $(ifc.tap)')
 	
 	def stop_interfaces(self):
 		for ifc in self.node.interfaces.values():
@@ -64,13 +46,13 @@ class VirtualMachine:
 				else:
 					net = 'ifc.net.name'
 				try:
-					env.brctl_delif(net, 'ifc.tap')
-					env.tap_stop('ifc.tap')
+					env.run('brctl delif $(ifc.tap)')
+					env.run('ip link del $(ifc.net) $(ifc.tap)')
 				except Exception as e:
 					logging.error(e)
 
 	def prepare_overlay(self):
-		self.env.system('mkdir -p $(VM_OVERLAY)')
+		self.env.run('mkdir -p $(VM_OVERLAY)')
 		for overlay in self.node.overlays.values():
 			root = self.env.resolve(overlay.path)
 			logging.info('Creating overlay: %s', root)
@@ -96,7 +78,7 @@ class VirtualMachine:
 	def process_file(self, src, dst):
 		dir = os.path.dirname(dst)
 		if not os.path.exists(dir):
-			self.env.system('mkdir -p $(dir)', True, dir=dir)
+			self.env.run('mkdir -p $(dir)', dir=dir)
 			
 		if os.path.islink(src):
 			logging.debug('Copying symlink %s -> %s', src, dst)
@@ -123,11 +105,9 @@ class VirtualMachine:
 
 	def write_file(self, path_parts, contents):
 		path = os.path.join(*path_parts)
-		#logging.debug('write_file: %s, %s', path, contents)
-	
 		dir = os.path.dirname(path)
 		if not os.path.exists(dir):
-			self.env.system('mkdir -p $(dir)', True, dir=dir)
+			self.env.run('mkdir -p $(dir)', dir=dir)
 		
 		self._write_file(path, 'w', contents)
 	
