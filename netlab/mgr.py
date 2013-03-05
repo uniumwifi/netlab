@@ -48,8 +48,8 @@ def sessions_delete(id):
 
 @bottle.route('/sessions/<id>/start', method='POST')
 def sessions_start(id):
-	kwargs = bottle.request.params
-	logging.info("sessions_start(%s): %s" % (id, kwargs.dict))
+	kwargs = bottle.request.json
+	logging.info("sessions_start(%s): %s" % (id, kwargs))
 	session = Session.Load(id)
 	session.start(**kwargs)
 	return { 'status': 'starting' }

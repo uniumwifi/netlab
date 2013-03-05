@@ -34,8 +34,9 @@ class VirtualMachine:
 				else:
 					net = 'ifc.net.name'
 				logging.warn('%s/%s: %s', self.node.name, ifc.name, ifc.tap)
-				env.run('ip link add $(ifc.tap)')
-				env.run('brctl addif $(ifc.net) $(ifc.tap)')
+				env.run('ip tuntap add dev $(ifc.tap) mode tap')
+				env.run('ip link set dev $(ifc.tap) up')
+				env.run('ip link set dev $(ifc.tap) master $(ifc.net)')
 	
 	def stop_interfaces(self):
 		for ifc in self.node.interfaces.values():
@@ -46,8 +47,7 @@ class VirtualMachine:
 				else:
 					net = 'ifc.net.name'
 				try:
-					env.run('brctl delif $(ifc.tap)')
-					env.run('ip link del $(ifc.net) $(ifc.tap)')
+					env.run('ip link del dev $(ifc.tap)')
 				except Exception as e:
 					logging.error(e)
 
