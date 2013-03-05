@@ -24,7 +24,13 @@ def do_clear(args):
 
 def do_create(args):
 	lab = lib.NetLab(args.url)
-	r = lab.create(args.file, args.env, args.envfile)
+
+	env = {}
+	for e in args.env:
+		(k, v) = e.split('=', 1)
+		env[k] = v
+	
+	r = lab.create(args.file, env, args.envfile)
 	pprint.pprint(r)
 
 def do_view(args):

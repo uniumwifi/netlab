@@ -34,18 +34,13 @@ class NetLab(object):
 			'doc': doc.json()
 		}
 
-	def create(self, yaml, envs, envfiles):
+	def create(self, yaml, env={}, envfiles=[]):
 		if not os.path.exists(yaml):
 			raise IOError(errno.ENOENT, "File not found", yaml)
 		for f in envfiles:
 			if not os.path.exists(f):
 				raise IOError(errno.ENOENT, "File not found", f)
 			
-		env = {}
-		for e in envs:
-			(k, v) = e.split('=', 1)
-			env[k] = v
-		
 		data = {
 			'user': getpass.getuser(),
 			'yaml': os.path.abspath(yaml),
