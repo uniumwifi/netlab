@@ -14,8 +14,15 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   intro
+   install
+   
+   usage
+   
    code
    vm
+   
+   devel
 
 Indices and tables
 ==================
