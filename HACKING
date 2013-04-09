@@ -1,7 +1,7 @@
 Initial development setup:
 $ virtualenv ~/netlab
 $ source ~/netlab/bin/activate
-$ pip -r requirements.pip
+$ pip install -r requirements.pip
 
 Daily development work:
 $ source ~/netlab/bin/activate
